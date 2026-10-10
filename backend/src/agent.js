@@ -8,7 +8,11 @@ import { config } from './config.js';
 export function buildArgs(type, params) {
   if (type === 'filesystem') {
     const args = ['filesystem'];
-    if (params.roots.length > 0) args.push('--roots', params.roots.join(','));
+    if (params.roots.length > 0) {
+      args.push('--roots', params.roots.join(','));
+      // Missing (schedules saved before this option existed) counts as true.
+      if (params.include_defaults !== false) args.push('--include-defaults');
+    }
     return args;
   }
   return ['tls', '--duration', `${params.duration_seconds}s`];

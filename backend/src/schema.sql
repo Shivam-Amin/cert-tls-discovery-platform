@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS schedules (
 
 -- Schedules start switched off; the UI turns them on.
 INSERT OR IGNORE INTO schedules (type, interval_minutes, params) VALUES
-  ('filesystem', 60, '{"roots":[]}'),
+  ('filesystem', 60, '{"roots":[],"include_defaults":true}'),
   ('tls',        30, '{"duration_seconds":30}');
 
 -- Every report query filters by run_id.

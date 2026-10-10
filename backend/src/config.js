@@ -24,9 +24,12 @@ export const LIMITS = {
   maxIntervalMinutes: 24 * 60,
 };
 
-// filesystem: empty roots = let the agent use its default certificate folders.
+// filesystem: the backend never knows the default folders; the agent does.
+//   roots: []                     → agent scans its common certificate folders
+//   roots: [...], include_defaults → agent scans these plus its common folders
+//   roots: [...], !include_defaults → only these
 export const DEFAULT_PARAMS = {
-  filesystem: { roots: [] },
+  filesystem: { roots: [], include_defaults: true },
   tls: { duration_seconds: 30 },
 };
 
