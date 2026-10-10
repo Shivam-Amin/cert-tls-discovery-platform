@@ -53,8 +53,10 @@ func runFilesystem(args []string) int {
 
 	// Default dirs that don't exist on this distro are skipped quietly.
 	// Dirs the user asked for are reported as errors if missing.
-	roots := existingDirs(defaultScanRoots)
-	if strings.TrimSpace(*rootsFlag) != "" {
+	var roots []string
+	if strings.TrimSpace(*rootsFlag) == "" {
+		roots = existingDirs(defaultScanRoots)
+	} else {
 		roots = splitCSV(*rootsFlag)
 		if len(roots) == 0 {
 			fmt.Fprintln(os.Stderr, "--roots has no paths")
@@ -117,7 +119,7 @@ func existingDirs(dirs []string) []string {
 		if info, err := os.Stat(d); err == nil && info.IsDir() {
 			out = append(out, d)
 		} else {
-			log.Printf("skip missing default root %s", d)
+			log.Printf("default folder %s does not exist on this system, skipping it", d)
 		}
 	}
 	return out
