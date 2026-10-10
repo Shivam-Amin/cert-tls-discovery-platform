@@ -1,0 +1,26 @@
+# Agent build output (build with: cd agent && go build -trimpath -ldflags="-s -w" -o agent-linux .)
+agent/agent-linux
+
+# Node / frontend
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+
+# Local database and env
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.local
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+.cursor/
+temp/
