@@ -36,10 +36,11 @@ func main() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage:
-  agent-linux filesystem [--roots dir,dir]
+  agent-linux filesystem [--roots dir,dir] [--include-defaults]
   agent-linux tls [--iface any] [--duration 30s]
 
-filesystem walks certificate files under common Linux dirs, or --roots.
+filesystem walks certificate files under common Linux dirs, or only --roots
+(plus the common dirs with --include-defaults).
 tls observes TLS handshake metadata for --duration (needs sudo).
 `)
 }
@@ -47,21 +48,24 @@ tls observes TLS handshake metadata for --duration (needs sudo).
 func runFilesystem(args []string) int {
 	flags := flag.NewFlagSet("filesystem", flag.ContinueOnError)
 	rootsFlag := flags.String("roots", "", "comma-separated scan roots (default: common Linux cert dirs)")
+	includeDefaults := flags.Bool("include-defaults", false, "with --roots: also scan the common Linux cert dirs")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
 
-	// Default dirs that don't exist on this distro are skipped quietly.
 	// Dirs the user asked for are reported as errors if missing.
+	// Default dirs that don't exist on this distro are skipped quietly.
 	var roots []string
-	if strings.TrimSpace(*rootsFlag) == "" {
-		roots = existingDirs(defaultScanRoots)
-	} else {
+	hasRoots := strings.TrimSpace(*rootsFlag) != ""
+	if hasRoots {
 		roots = splitCSV(*rootsFlag)
 		if len(roots) == 0 {
 			fmt.Fprintln(os.Stderr, "--roots has no paths")
 			return 2
 		}
+	}
+	if !hasRoots || *includeDefaults {
+		roots = append(roots, existingDirs(defaultScanRoots)...)
 	}
 	roots = cleanRoots(roots)
 

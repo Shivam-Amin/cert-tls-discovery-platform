@@ -3,14 +3,14 @@
 One static-ish Go binary with two commands. Each run prints **one JSON report on stdout**; logs go to stderr.
 
 ```bash
-sudo ./agent-linux filesystem [--roots /etc/ssl,/opt/certs]
+sudo ./agent-linux filesystem [--roots /opt/certs,/srv/tls] [--include-defaults]
 sudo ./agent-linux tls [--iface any] [--duration 30s]
 ```
 
 | | |
 |---|---|
 | Supported OS | Linux (tested on Ubuntu 26.04 arm64 via OrbStack) |
-| Package size | **4,436,992 bytes (~4.4 MB)**; limit is 5 MB |
+| Package size | **4,502,656 bytes (~4.5 MB)**; limit is 5 MB |
 | Language | Go 1.22+ with cgo (for libpcap) |
 | Third-party libs | `github.com/google/gopacket` (pcap + packet decoding). Everything else is the Go standard library. |
 
@@ -88,7 +88,7 @@ Expected (without sudo): `status: partial` because of `locked.pem`; counts: 14 f
 
 ## Filesystem scan
 
-- **Roots:** default `/etc/ssl`, `/usr/local/share/ca-certificates`, `/etc/pki` (missing defaults are skipped). `--roots` replaces the defaults; a missing `--roots` dir is an error.
+- **Roots:** the agent owns the list of common folders: `/etc/ssl`, `/usr/local/share/ca-certificates`, `/etc/pki` (missing ones are skipped). No `--roots` → only these. `--roots a,b` → only `a,b`. `--roots a,b --include-defaults` → `a,b` plus the common folders (nested/duplicate folders are merged). A missing `--roots` dir is an error.
 - **Files:** `.pem .crt .cer .der .p12 .pfx`. PEM files may hold many certs; other files are tried as PEM, then raw DER.
 - **Private keys:** `.key` files are not opened. `PRIVATE KEY` PEM blocks are skipped without decoding; key material never appears in output. A PEM with only a key produces no row.
 - **Per certificate:** path, filename, format, scan root, discovered_at, SHA-256 fingerprint, serial, subject, issuer, SANs, chain position, key algorithm + size, signature algorithm, validity dates, days to expiry, `valid | expiring | expired | not_yet_valid`, parse status, confidence, owning process (`unavailable`).
