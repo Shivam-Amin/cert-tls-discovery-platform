@@ -1,0 +1,19 @@
+{
+  "name": "cert-tls-discovery-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local API, SQLite store and scheduler for the certificate/TLS discovery agent",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.3.0"
+  }
+}
