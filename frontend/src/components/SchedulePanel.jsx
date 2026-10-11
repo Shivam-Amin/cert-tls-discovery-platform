@@ -1,4 +1,4 @@
-// Periodic scan settings: one row per scan type.
+// Periodic scan settings: one card per scan type.
 // The backend runs due scans on its own; this only edits the settings.
 import { useState } from 'react';
 import { api } from '../api.js';
@@ -7,18 +7,18 @@ import { IncludeDefaults, parseFolders } from './ScanPanel.jsx';
 
 export default function SchedulePanel({ schedules, onSaved }) {
   return (
-    <div className="card">
-      <div className="card-title">
+    <section>
+      <div className="section-header">
         <h2>Scheduled scans</h2>
-        <span className="muted small">Runs automatically while the backend is running (browser can be closed).</span>
+        <span className="muted small">Run automatically while the backend is running (the browser can be closed).</span>
       </div>
       <div className="grid-2">
         {schedules.map((s) => (
-          // key: after a save the row resets to the saved values
+          // key: after a save the card resets to the saved values
           <ScheduleRow key={`${s.type}-${s.updated_at}`} schedule={s} onSaved={onSaved} />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -53,8 +53,8 @@ function ScheduleRow({ schedule, onSaved }) {
   }
 
   return (
-    <div>
-      <h3>{isFs ? 'Filesystem scan' : 'TLS metadata scan'}</h3>
+    <div className="card form-col">
+      <h2>{isFs ? 'Filesystem scan' : 'TLS metadata scan'}</h2>
       <div className="row field">
         <label className="checkbox">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
@@ -100,7 +100,7 @@ function ScheduleRow({ schedule, onSaved }) {
           </div>
         )}
       </div>
-      <div className="row">
+      <div className="row actions">
         <button className="small primary" disabled={saving} onClick={save}>
           {saving ? 'Saving…' : 'Save'}
         </button>

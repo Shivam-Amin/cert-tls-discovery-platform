@@ -118,6 +118,14 @@ h3 { font-size: 15.5px; margin: 0 0 8px; }
   padding: 16px;
   min-width: 0;
 }
+/* Page section: a heading line with a short description, cards below. */
+.section-header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.section-header h2 { font-size: 19px; margin: 0; }
+
+/* Form card: fills the grid cell; .actions (the buttons) sit at the bottom,
+   so buttons in side-by-side cards line up. */
+.form-col { display: flex; flex-direction: column; height: 100%; }
+.form-col .actions { margin-top: auto; }
 .card-title { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .card-title h2 { margin: 0; }
 .card-title .spacer { flex: 1; }

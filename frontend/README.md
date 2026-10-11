@@ -15,6 +15,7 @@ React + Vite. Three views: Discovery Runs, File System Scan Report and TLS Metad
 Inside Linux:
 
 ```bash
+sudo apt install -y nodejs npm   # Node.js 20+
 cd frontend
 npm install
 npm run build      # writes dist/, served by the backend on :8080
