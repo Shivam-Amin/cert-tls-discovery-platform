@@ -1,15 +1,17 @@
-# Backend: local API, SQLite store, scheduler
+# Backend
 
-Node.js + Express. Starts agent scans, tracks run status, stores results in SQLite, runs scheduled scans, and serves the report APIs (and the built web UI).
+Node.js + Express. Starts agent scans, tracks run status, stores results in SQLite, runs scheduled scans, and serves the API and the built web UI.
 
-## Setup (inside Linux, e.g. `orb -m ubuntu`)
+## Run
+
+Inside Linux, after building the agent (`agent/`) and the UI (`frontend/`):
 
 ```bash
 sudo apt install -y nodejs npm             # Node 20+
-cd agent && go build -trimpath -ldflags="-s -w" -o agent-linux . && cd ..   # the backend runs this binary
-cd backend
-npm install                                # run inside Linux: better-sqlite3 is compiled for this OS
-sudo npm start                             # sudo: TLS capture needs root
+cd agent && go build -trimpath -ldflags="-s -w" -o agent-linux .  # the backend runs this binary (ignore if you've built the agent)
+cd backend         # basically, cd to backend folder now
+npm install        # inside Linux: better-sqlite3 is compiled for the OS
+sudo npm start     # sudo: the TLS scan needs root
 ```
 
 Open `http://localhost:8080/api/health`. On macOS with OrbStack the same URL works from the Mac.
@@ -19,7 +21,7 @@ The database file `backend/data/discovery.db` is created on first start (schema 
 | Env var | Default |
 |---|---|
 | `PORT` | `8080` |
-| `HOST` | `127.0.0.1` (local only: scans run as root) |
+| `HOST` | `127.0.0.1` |
 | `AGENT_PATH` | `../agent/agent-linux` |
 | `DB_PATH` | `./data/discovery.db` |
 
@@ -27,56 +29,63 @@ The database file `backend/data/discovery.db` is created on first start (schema 
 
 | File | Job |
 |---|---|
-| `src/server.js` | Express app, mounts routes, serves `frontend/dist`, starts the scheduler |
+| `src/server.js` | Express app, routes, serves `frontend/dist`, starts the scheduler |
 | `src/config.js` | settings, limits, timeouts |
 | `src/schema.sql` | tables and indexes |
-| `src/db.js` | **all SQL**: runs, saving reports, report rows, schedules |
+| `src/db.js` | all SQL queries |
 | `src/validate.js` | checks input from the UI |
-| `src/agent.js` | params → agent arguments, runs the binary, checks its JSON |
+| `src/agent.js` | builds agent arguments, runs the binary, checks its JSON |
 | `src/runner.js` | queue: one scan at a time |
 | `src/scheduler.js` | every 15 s, queues scans whose schedule is due |
-| `src/routes/*.js` | HTTP endpoints |
+| `src/routes/*.js` | API endpoints |
 
 ## Run lifecycle
 
 ```
-POST /api/runs  or  scheduler
-   → runs row: status queued (id returned at once)
-   → queue (one at a time) → status running
-   → agent-linux <args>   (no shell; timeout: filesystem 10 min, tls duration + 30 s)
-   → JSON checked → certificates / tls_observations / relationships saved in one transaction
-   → status completed | partial | failed, with counts, errors, agent log (stderr)
+POST /api/runs or scheduler
+  → run saved as queued, id returned
+  → queue (one at a time) → running
+  → agent-linux <args>   (no shell; timeout: filesystem 10 min, tls duration + 30 s)
+  → JSON checked, rows saved in one transaction
+  → completed | partial | failed, with counts, errors and the agent log
 ```
 
-Failure handling: agent missing, rejected arguments (exit 2), no/invalid JSON, or timeout → run `failed` (or `partial` if the agent still reported). Runs left `queued`/`running` when the backend stops are marked `failed` at the next start.
+If the agent is missing, rejects its arguments or returns invalid JSON, the run is `failed` with the reason. Runs still `queued` or `running` when the backend stops are marked `failed` on the next start.
 
-Each run stores `params` (settings, JSON) and `command` (exact agent command), so every result can be traced to how it was produced.
+Each run stores its `params` and the exact `command`.
 
 ## Scheduler
 
-One schedule per scan type in the `schedules` table (off by default). When enabled, a timer in the backend queues a run every `interval_minutes` with trigger `scheduled` and the schedule's own params. It runs while the backend is running, whether or not a browser is open. If the previous run of that type hasn't finished, the tick is skipped.
+One schedule per scan type (off by default), set from the UI. When enabled, the backend queues a run every `interval_minutes` with trigger `scheduled`. It runs while the backend is running, with or without a browser open. If the previous run of that type is still active, the schedule waits.
 
 ## API
 
-| Method | Path | Body / query | Returns |
-|---|---|---|---|
-| GET | `/api/health` | | `{ok, agent_found, running_as_root}` |
-| GET | `/api/summary` | | latest run per type, active runs, totals |
-| GET | `/api/runs` | `?type=&status=&limit=` | runs, newest first (without log) |
-| POST | `/api/runs` | `{"type":"filesystem","params":{"roots":["/etc/ssl"]}}` or `{"type":"tls","params":{"duration_seconds":30}}` | `202` + the queued run |
-| GET | `/api/runs/:id` | | one run incl. `log` |
-| GET | `/api/runs/:id/certificates` | | certificate rows |
-| GET | `/api/runs/:id/tls` | | TLS connection rows |
-| GET | `/api/runs/:id/relationships` | | edges |
-| GET | `/api/schedules` | | both schedules |
-| PUT | `/api/schedules/:type` | `{"enabled":true,"interval_minutes":10,"params":{...}}` (all optional) | updated schedule |
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/health` | backend up, agent found, running as root |
+| GET | `/api/summary` | latest run per type, active runs, totals |
+| GET | `/api/runs` | `?type=&status=&limit=` |
+| POST | `/api/runs` | `{"type":"filesystem","params":{"roots":["/opt/certs"],"include_defaults":true}}` or `{"type":"tls","params":{"duration_seconds":30}}` → `202` with the queued run |
+| GET | `/api/runs/:id` | one run, including its log |
+| GET | `/api/runs/:id/certificates` | |
+| GET | `/api/runs/:id/tls` | |
+| GET | `/api/runs/:id/relationships` | |
+| GET | `/api/schedules` | |
+| PUT | `/api/schedules/:type` | `{"enabled":true,"interval_minutes":10,"params":{...}}` |
 
-Limits: `roots` absolute paths, max 20, no commas (empty = agent defaults). `duration_seconds` 5–300. `interval_minutes` 1–1440. Errors: `{"error": "..."}` with 400 / 404 / 500.
+Limits: folders must be absolute paths (max 20), `duration_seconds` 5–300, `interval_minutes` 1–1440. Errors return `{"error": "..."}` with status 400, 404 or 500.
 
-Try it:
+Examples:
 
 ```bash
-curl -XPOST localhost:8080/api/runs -H 'content-type: application/json' -d '{"type":"filesystem"}'
+curl -X POST localhost:8080/api/runs -H 'content-type: application/json' -d '{"type":"filesystem"}'
 curl localhost:8080/api/runs
 curl localhost:8080/api/runs/1/certificates
+```
+
+## Database
+
+```bash
+sudo apt install -y sqlite3
+sudo sqlite3 data/discovery.db "SELECT id, type, status, record_count FROM runs;"
 ```

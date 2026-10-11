@@ -35,9 +35,7 @@ Browser (React UI) ──HTTP /api──▶ Backend (Node.js + Express, :8080)
 2. The backend inserts a run (`queued`, trigger `manual` or `scheduled`) and returns its ID at once; the run appears in the table.
 3. When it's the run's turn: status `running`, and the backend starts the agent with arguments built from the settings (no shell), e.g. `agent-linux tls --duration 30s`.
 4. The agent prints one JSON report. The backend validates it and saves all rows in one transaction, then sets the status, counts, errors and the agent's log.
-5. The UI polls while a run is active and opens the finished run's report.
-
-Every run stores its `params` (settings) and the exact `command`, so each result can be traced to how it was produced.
+5. The UI refreshes while a run is active; clicking a run opens its report.
 
 ## Setup and start
 
@@ -76,13 +74,11 @@ npm install
 sudo npm start
 ```
 
-Open **http://localhost:8080**. The dot in the top-right corner shows whether the backend is up, the agent was found, and the backend runs as root.
-
-Run all `npm install` commands inside Linux: `better-sqlite3` is compiled for the OS it is installed on.
+Open **http://localhost:8080**. Run the `npm install` commands inside Linux, because `better-sqlite3` is compiled for the OS it is installed on.
 
 ### Optional: demo certificate files
 
-The common folders only hold valid CA certificates. To see expired, expiring, not-yet-valid, chain, duplicate, key-only, PKCS#12 and broken files:
+Creates test certificates (expired, expiring, chain, duplicates, PKCS#12, invalid files) in `/tmp/certfix`; scan that folder from the UI:
 
 ```bash
 agent/scripts/make-fixtures.sh      # creates /tmp/certfix (changes nothing else)
@@ -92,7 +88,7 @@ Then run a filesystem scan with extra folder `/tmp/certfix`.
 
 ### Generating TLS traffic for a TLS scan
 
-Start a TLS scan, then within the capture window run HTTPS requests on the same machine:
+While a TLS scan is running, make HTTPS requests on the same machine:
 
 ```bash
 curl -s -o /dev/null https://example.com
@@ -104,17 +100,17 @@ Use `https://`: plain `curl example.com` is unencrypted HTTP and produces no TLS
 ### Tests
 
 ```bash
-cd agent && go test ./...      # works on macOS too (no root, no Linux needed)
+cd agent && go test ./...
 ```
 
 ## Using the app
 
-- **Discovery Runs:** latest results, the two scan buttons (extra folders + "also scan the common certificate folders"; capture duration 5–300 s), schedule settings per scan type (on/off, every N minutes, its own settings), charts (runs by type and status, findings per run, duration per run) and the run history. Click a run to open its report.
-- **File System Scan Report:** totals (found, unique, duplicates, valid, expiring, expired, not yet valid, parse failed), charts (validity posture, key algorithms and sizes, signature algorithms, leading issuers, certificates by folder) and a searchable, filterable certificate inventory.
-- **TLS Metadata Scan Report:** totals (TLS packets, TLS records, connections, unique endpoints and ports, certificates, process-mapped connections, relationships), charts (TLS versions, handshake outcome, peer-certificate posture, cipher suites, top endpoints, activity over time), the **relationship map** and a searchable connection table.
-- **Scheduling:** schedules run inside the backend while it is running, even with no browser open; their runs are marked `scheduled`. They are off until enabled.
+- **Discovery Runs:** latest results, the two scan buttons, schedule settings, charts (runs by type and status, findings and duration per run) and the run history.
+- **File System Scan Report:** totals, charts (validity, key algorithms and sizes, signature algorithms, issuers, folders) and a certificate table with search and filters.
+- **TLS Metadata Scan Report:** totals, charts (TLS versions, handshake outcome, certificate posture, cipher suites, top endpoints, activity over time), the relationship map and a connection table with search and filters.
+- **Scheduling:** schedules run inside the backend, with or without a browser open, and their runs are marked `scheduled`. They are off until enabled.
 
-All data shown comes from the agent on this machine. **No sample or mock data** is included; each report names the agent command that produced it.
+All data comes from the agent on this machine; no sample data is used.
 
 ## Data model (SQLite)
 
@@ -130,17 +126,7 @@ Relationship model: nodes are host/process, endpoint (IP:port), certificate (SHA
 
 ## API
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/api/health` | backend up, agent found, running as root |
-| GET | `/api/summary` | latest run per type, active runs, totals |
-| GET | `/api/runs` | run history (`?type=&status=&limit=`) |
-| POST | `/api/runs` | start a scan: `{"type":"filesystem","params":{"roots":["/opt/certs"],"include_defaults":true}}` or `{"type":"tls","params":{"duration_seconds":30}}` |
-| GET | `/api/runs/:id` | one run, including its log |
-| GET | `/api/runs/:id/certificates` · `/tls` · `/relationships` | report rows |
-| GET / PUT | `/api/schedules` · `/api/schedules/:type` | read / change periodic scans |
-
-Details: [backend/README.md](backend/README.md).
+REST API under `/api` (runs, reports, schedules). Endpoints are listed in [backend/README.md](backend/README.md).
 
 ## Assumptions
 

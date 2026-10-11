@@ -1,58 +1,48 @@
-# Frontend: web UI
+# Frontend
 
-React + Vite. Three views: **Discovery Runs**, **File System Scan Report**, **TLS Metadata Scan Report**. Talks only to the backend (`/api/...`), never to the agent.
+React + Vite. Three views: Discovery Runs, File System Scan Report and TLS Metadata Scan Report. It talks only to the backend API.
 
 | Library | Used for |
 |---|---|
 | `react`, `react-dom` | UI |
-| `react-router` | pages: `/` and `/runs/:id` |
+| `react-router` | pages `/` and `/runs/:id` |
 | `recharts` | charts |
 | `cytoscape` | relationship map |
-| `vite`, `@vitejs/plugin-react` | dev server and build |
+| `vite` | dev server and build |
 
-## Run (inside Linux, e.g. `orb -m ubuntu`)
+## Run
+
+Inside Linux:
 
 ```bash
 cd frontend
 npm install
-npm run build        # writes dist/; the backend serves it at http://localhost:8080
+npm run build      # writes dist/, served by the backend on :8080
 ```
 
-During development (live reload), with the backend running:
+For development with live reload (backend running):
 
 ```bash
-npm run dev          # http://localhost:5173, /api is proxied to :8080
+npm run dev        # http://localhost:5173, /api is forwarded to :8080
 ```
 
 ## Files
 
 | File | Job |
 |---|---|
-| `src/main.jsx`, `src/App.jsx` | start-up, top bar, routes, backend health indicator |
-| `src/api.js` | every backend call |
-| `src/usePolling.js` | load data, optionally refresh every N ms |
-| `src/format.js` | dates, durations, counting helpers |
-| `src/theme.js` | reads colours from CSS variables for charts/graph |
-| `src/styles.css` | all styling; all colours as variables |
-| `src/pages/RunsPage.jsx` | View 1: summary, scan buttons, schedules, charts, runs table |
-| `src/pages/RunPage.jsx` | run header, status banners, agent log; picks the report |
-| `src/pages/FilesystemReport.jsx` | View 2 |
-| `src/pages/TlsReport.jsx` | View 3 |
-| `src/components/*` | scan panel, schedule panel, tables, charts, relationship map, badges |
+| `src/App.jsx` | top bar, routes, backend status |
+| `src/api.js` | backend calls |
+| `src/usePolling.js` | load data and refresh it on an interval |
+| `src/format.js` | date, duration and counting helpers |
+| `src/styles.css`, `src/theme.js` | styling; colours are CSS variables, also used by the charts |
+| `src/pages/RunsPage.jsx` | Discovery Runs: latest results, scan buttons, schedules, charts, run history |
+| `src/pages/RunPage.jsx` | run details, status and errors, agent log |
+| `src/pages/FilesystemReport.jsx` | File System Scan Report |
+| `src/pages/TlsReport.jsx` | TLS Metadata Scan Report |
+| `src/components/` | scan and schedule forms, tables, charts, relationship map |
 
-## Behaviour
+## Notes
 
-- **Live updates:** the runs page refreshes every 2 s while a scan is queued/running, otherwise every 10 s (so scheduled runs appear on their own). A run page refreshes every 2 s until the run finishes, then loads its report.
-- **States:** loading skeletons; empty results explained; running (spinner, TLS countdown); partial (yellow banner with errors); failed (red banner, agent log opened); backend unreachable (error with retry, red dot in the top bar).
-- **Filtering/search** happens in the browser on the run's rows.
-- All data shown is real agent output; there is no sample data. Each report names the command that produced it.
-
-## Theme
-
-Light theme only for now.
-
-**Dark theme later:** every colour is a CSS variable at the top of `src/styles.css`, and charts and the relationship map read those variables through `src/theme.js`; no component hard-codes a colour. To add dark mode:
-
-1. Add `:root[data-theme='dark'] { … }` (and/or `@media (prefers-color-scheme: dark)`) redefining the same variables.
-2. Add a toggle that sets `document.documentElement.dataset.theme = 'dark'`.
-3. Re-render charts and the graph after toggling (they read colours when they draw).
+- The runs page refreshes every 2 s while a scan is active and every 10 s otherwise, so scheduled runs appear without reloading.
+- Search and filters work on the loaded rows in the browser.
+- Each page shows loading, empty, running, partial and failed states.
