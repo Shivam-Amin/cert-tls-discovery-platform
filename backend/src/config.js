@@ -24,12 +24,9 @@ export const LIMITS = {
   maxIntervalMinutes: 24 * 60,
 };
 
-// filesystem: the backend never knows the default folders; the agent does.
-//   roots: []                     → agent scans its common certificate folders
-//   roots: [...], include_defaults → agent scans these plus its common folders
-//   roots: [...], !include_defaults → only these
+// Frontend sends selected paths as roots. Empty roots = nothing to scan.
 export const DEFAULT_PARAMS = {
-  filesystem: { roots: [], include_defaults: true },
+  filesystem: { roots: [] },
   tls: { duration_seconds: 30 },
 };
 

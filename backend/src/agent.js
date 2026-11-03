@@ -10,8 +10,6 @@ export function buildArgs(type, params) {
     const args = ['filesystem'];
     if (params.roots.length > 0) {
       args.push('--roots', params.roots.join(','));
-      // Missing (schedules saved before this option existed) counts as true.
-      if (params.include_defaults !== false) args.push('--include-defaults');
     }
     return args;
   }

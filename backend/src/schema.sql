@@ -99,8 +99,9 @@ CREATE TABLE IF NOT EXISTS schedules (
 );
 
 -- Schedules start switched off; the UI turns them on.
+-- Default to common cert paths (same as frontend checkboxes)
 INSERT OR IGNORE INTO schedules (type, interval_minutes, params) VALUES
-  ('filesystem', 60, '{"roots":[],"include_defaults":true}'),
+  ('filesystem', 60, '{"roots":["/etc/ssl","/usr/local/share/ca-certificates","/etc/pki"]}'),
   ('tls',        30, '{"duration_seconds":30}');
 
 -- Every report query filters by run_id.

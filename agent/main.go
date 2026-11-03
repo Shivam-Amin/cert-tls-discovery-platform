@@ -36,36 +36,31 @@ func main() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage:
-  agent-linux filesystem [--roots dir,dir] [--include-defaults]
+  agent-linux filesystem --roots dir,dir,...
   agent-linux tls [--iface any] [--duration 30s]
 
-filesystem walks certificate files under common Linux dirs, or only --roots
-(plus the common dirs with --include-defaults).
+filesystem walks certificate files under --roots (comma-separated absolute paths).
 tls observes TLS handshake metadata for --duration (needs sudo).
 `)
 }
 
 func runFilesystem(args []string) int {
 	flags := flag.NewFlagSet("filesystem", flag.ContinueOnError)
-	rootsFlag := flags.String("roots", "", "comma-separated scan roots (default: common Linux cert dirs)")
-	includeDefaults := flags.Bool("include-defaults", false, "with --roots: also scan the common Linux cert dirs")
+	rootsFlag := flags.String("roots", "", "comma-separated scan roots (required)")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
 
-	// Dirs the user asked for are reported as errors if missing.
-	// Default dirs that don't exist on this distro are skipped quietly.
-	var roots []string
-	hasRoots := strings.TrimSpace(*rootsFlag) != ""
-	if hasRoots {
-		roots = splitCSV(*rootsFlag)
-		if len(roots) == 0 {
-			fmt.Fprintln(os.Stderr, "--roots has no paths")
-			return 2
-		}
+	rootsStr := strings.TrimSpace(*rootsFlag)
+	if rootsStr == "" {
+		fmt.Fprintln(os.Stderr, "--roots is required")
+		return 2
 	}
-	if !hasRoots || *includeDefaults {
-		roots = append(roots, existingDirs(defaultScanRoots)...)
+
+	roots := splitCSV(rootsStr)
+	if len(roots) == 0 {
+		fmt.Fprintln(os.Stderr, "--roots has no paths")
+		return 2
 	}
 	roots = cleanRoots(roots)
 
@@ -115,18 +110,6 @@ func emit(report Report) int {
 		return 1
 	}
 	return exitCode(report.Status)
-}
-
-func existingDirs(dirs []string) []string {
-	var out []string
-	for _, d := range dirs {
-		if info, err := os.Stat(d); err == nil && info.IsDir() {
-			out = append(out, d)
-		} else {
-			log.Printf("default folder %s does not exist on this system, skipping it", d)
-		}
-	}
-	return out
 }
 
 // cleanRoots makes every root absolute and drops repeats and roots that sit

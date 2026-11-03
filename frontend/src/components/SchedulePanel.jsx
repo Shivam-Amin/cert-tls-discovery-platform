@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import { formatDateTime } from '../format.js';
-import { IncludeDefaults, parseFolders } from './ScanPanel.jsx';
+import { parseFolders } from './ScanPanel.jsx';
+
+// Common Linux certificate locations (same as ScanPanel)
+const DEFAULT_CERT_PATHS = [
+  '/etc/ssl',
+  '/usr/local/share/ca-certificates',
+  '/etc/pki',
+];
 
 export default function SchedulePanel({ schedules, onSaved }) {
   return (
@@ -25,13 +32,31 @@ export default function SchedulePanel({ schedules, onSaved }) {
 function ScheduleRow({ schedule, onSaved }) {
   const [enabled, setEnabled] = useState(schedule.enabled);
   const [intervalMinutes, setIntervalMinutes] = useState(schedule.interval_minutes);
-  const [folders, setFolders] = useState((schedule.params.roots ?? []).join(', '));
-  const [includeDefaults, setIncludeDefaults] = useState(schedule.params.include_defaults !== false);
+  
+  // Parse roots into custom folders + default selections
+  const initialRoots = schedule.params.roots ?? [];
+  const initialCustom = initialRoots.filter(r => !DEFAULT_CERT_PATHS.includes(r));
+  const initialDefaults = initialRoots.filter(r => DEFAULT_CERT_PATHS.includes(r));
+  
+  const [folders, setFolders] = useState(initialCustom.join(', '));
+  const [selectedDefaults, setSelectedDefaults] = useState(new Set(initialDefaults));
   const [duration, setDuration] = useState(schedule.params.duration_seconds ?? 30);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   const isFs = schedule.type === 'filesystem';
+
+  function toggleDefaultPath(path) {
+    setSelectedDefaults((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }
 
   async function save() {
     setSaving(true);
@@ -41,7 +66,7 @@ function ScheduleRow({ schedule, onSaved }) {
         enabled,
         interval_minutes: Number(intervalMinutes),
         params: isFs
-          ? { roots: parseFolders(folders), include_defaults: includeDefaults }
+          ? { roots: [...parseFolders(folders), ...selectedDefaults] }
           : { duration_seconds: Number(duration) },
       });
       onSaved?.();
@@ -77,12 +102,22 @@ function ScheduleRow({ schedule, onSaved }) {
             <input
               type="text"
               value={folders}
-              placeholder="Extra folders (optional), e.g. /opt/app/certs"
+              placeholder="Additional folders (optional), e.g. /opt/app/certs"
               onChange={(e) => setFolders(e.target.value)}
-              aria-label="Extra folders to scan"
+              aria-label="Additional folders to scan"
             />
             <div style={{ marginTop: 8 }}>
-              <IncludeDefaults checked={includeDefaults} onChange={setIncludeDefaults} disabled={!folders.trim()} />
+              <label className="small">Common certificate folders</label>
+              {DEFAULT_CERT_PATHS.map((path) => (
+                <label key={path} className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedDefaults.has(path)}
+                    onChange={() => toggleDefaultPath(path)}
+                  />
+                  {path}
+                </label>
+              ))}
             </div>
           </>
         ) : (

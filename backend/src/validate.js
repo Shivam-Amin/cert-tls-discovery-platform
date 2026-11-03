@@ -8,8 +8,7 @@ export function checkType(type) {
     : { error: `type must be one of: ${SCAN_TYPES.join(', ')}` };
 }
 
-// filesystem: { roots: ["/opt/certs", ...], include_defaults: true }
-//             (empty roots = the agent's common folders)
+// filesystem: { roots: ["/opt/certs", ...] }
 // tls:        { duration_seconds: 30 }
 export function checkParams(type, params = {}) {
   if (typeof params !== 'object' || params === null || Array.isArray(params)) {
@@ -18,11 +17,7 @@ export function checkParams(type, params = {}) {
   return type === 'filesystem' ? checkFilesystemParams(params) : checkTlsParams(params);
 }
 
-function checkFilesystemParams({
-  roots = DEFAULT_PARAMS.filesystem.roots,
-  include_defaults = DEFAULT_PARAMS.filesystem.include_defaults,
-}) {
-  if (typeof include_defaults !== 'boolean') return { error: 'include_defaults must be true or false' };
+function checkFilesystemParams({ roots = DEFAULT_PARAMS.filesystem.roots }) {
   // Accept a list, or one comma-separated string from a text box.
   const list = typeof roots === 'string' ? roots.split(',') : roots;
   if (!Array.isArray(list) || list.some((r) => typeof r !== 'string')) {
@@ -36,7 +31,7 @@ function checkFilesystemParams({
     if (!root.startsWith('/')) return { error: `"${root}" must be an absolute path (start with /)` };
     if (root.includes(',')) return { error: `"${root}" must not contain a comma` };
   }
-  return { value: { roots: cleaned, include_defaults } };
+  return { value: { roots: cleaned } };
 }
 
 function checkTlsParams({ duration_seconds = DEFAULT_PARAMS.tls.duration_seconds }) {

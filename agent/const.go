@@ -45,13 +45,6 @@ const (
 	directionUnknown  = "unknown"
 )
 
-// Common Linux certificate locations. Missing dirs are skipped, not errors.
-var defaultScanRoots = []string{
-	"/etc/ssl",
-	"/usr/local/share/ca-certificates",
-	"/etc/pki",
-}
-
 // Linux virtual folders skipped while walking (e.g. when scanning "/").
 var skipDirs = map[string]bool{
 	"/proc": true,
